@@ -80,6 +80,16 @@
     backup: true
   notify: Reload systemd
 
+- name: Install persistent Bluetooth audio PAM session service
+  ansible.builtin.template:
+    src: bpts-bluetooth-audio-session.service.j2
+    dest: /etc/systemd/system/bpts-bluetooth-audio-session.service
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Reload systemd
+
 - name: Enable and start Bluetooth
   ansible.builtin.systemd:
     name: bluetooth.service
@@ -89,6 +99,13 @@
 - name: Enable Bluetooth receiver startup service
   ansible.builtin.systemd:
     name: bluetooth-audio-start.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Enable persistent Bluetooth audio PAM session
+  ansible.builtin.systemd:
+    name: bpts-bluetooth-audio-session.service
     enabled: true
     state: started
     daemon_reload: true

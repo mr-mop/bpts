@@ -39,6 +39,7 @@ Reboot the Pi after the first run. Then pair with the Bluetooth name set in `blu
 - Installs BlueZ, PipeWire, WirePlumber, Bluetooth audio support, and audio utilities.
 - Adds the audio account to the `audio` group and enables lingering so PipeWire can run at boot without an interactive login.
 - Enables the PipeWire sockets and WirePlumber user service for that account.
+- Keeps a minimal PAM session open for the audio account. On the reference Pi, WirePlumber registered its Bluetooth A2DP endpoints only while an SSH login session existed; this service uses the same PAM session stack so Bluetooth remains available after SSH disconnects. It runs `sleep` only and does not open a shell or network listener.
 - Selects the Pi's analogue output using ALSA.
 - Configures WirePlumber to accept Bluetooth A2DP audio and offers the codec preferences from `group_vars/all.yml`. Negotiated codecs depend on both devices and the available codec implementations.
 - Enables Bluetooth at boot and runs a system service that powers on the adapter, enables pairing and discovery, and sets the Bluetooth alias.
