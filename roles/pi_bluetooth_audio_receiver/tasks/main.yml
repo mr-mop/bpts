@@ -1,0 +1,135 @@
+---
+- name: Require Debian 12
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Debian"
+      - ansible_facts.distribution_major_version == "12"
+    fail_msg: "This role currently targets Debian 12 (Bookworm), as used by the reference setup."
+
+- name: Install Bluetooth and audio packages
+  ansible.builtin.apt:
+    name: "{{ bluetooth_audio_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Add the audio user to the audio group
+  ansible.builtin.user:
+    name: "{{ bluetooth_audio_user }}"
+    groups:
+      - audio
+    append: true
+
+- name: Enable lingering for the audio user
+  ansible.builtin.command:
+    argv:
+      - loginctl
+      - enable-linger
+      - "{{ bluetooth_audio_user }}"
+  changed_when: false
+
+- name: Manage the optional Pi Bluetooth UART setting
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    line: "dtparam=krnbt=off"
+    state: "{{ 'present' if bluetooth_audio_krnbt_off | bool else 'absent' }}"
+    backup: true
+  when: bluetooth_audio_manage_krnbt | bool
+
+- name: Enable hciuart when using the user-space UART attachment
+  ansible.builtin.systemd:
+    name: hciuart.service
+    enabled: true
+  when:
+    - bluetooth_audio_manage_krnbt | bool
+    - bluetooth_audio_krnbt_off | bool
+
+- name: Create WirePlumber Bluetooth configuration directory
+  ansible.builtin.file:
+    path: /etc/wireplumber/bluetooth.lua.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure WirePlumber as an A2DP receiver
+  ansible.builtin.template:
+    src: 51-audio-sink.lua.j2
+    dest: /etc/wireplumber/bluetooth.lua.d/51-audio-sink.lua
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+
+- name: Install Bluetooth receiver startup script
+  ansible.builtin.template:
+    src: bluetooth-audio-start.sh.j2
+    dest: /usr/local/bin/bluetooth-audio-start.sh
+    owner: root
+    group: root
+    mode: "0755"
+    backup: true
+
+- name: Install Bluetooth receiver startup service
+  ansible.builtin.template:
+    src: bluetooth-audio-start.service.j2
+    dest: /etc/systemd/system/bluetooth-audio-start.service
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Reload systemd
+
+- name: Enable and start Bluetooth
+  ansible.builtin.systemd:
+    name: bluetooth.service
+    enabled: true
+    state: started
+
+- name: Enable Bluetooth receiver startup service
+  ansible.builtin.systemd:
+    name: bluetooth-audio-start.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Select the analogue output on Raspberry Pi
+  ansible.builtin.command:
+    argv:
+      - amixer
+      - cset
+      - numid=3
+      - "1"
+  when: bluetooth_audio_analog_output | bool
+  changed_when: false
+
+- name: Create PipeWire user socket wants directory
+  ansible.builtin.file:
+    path: "{{ bluetooth_audio_user_home }}/.config/systemd/user/sockets.target.wants"
+    state: directory
+    owner: "{{ bluetooth_audio_user }}"
+    group: "{{ bluetooth_audio_user }}"
+    mode: "0755"
+
+- name: Create PipeWire user service wants directory
+  ansible.builtin.file:
+    path: "{{ bluetooth_audio_user_home }}/.config/systemd/user/default.target.wants"
+    state: directory
+    owner: "{{ bluetooth_audio_user }}"
+    group: "{{ bluetooth_audio_user }}"
+    mode: "0755"
+
+- name: Enable PipeWire user units at boot
+  ansible.builtin.file:
+    src: "{{ bluetooth_audio_user_unit_dir }}/{{ item.unit }}"
+    dest: "{{ bluetooth_audio_user_home }}/.config/systemd/user/{{ item.target }}/{{ item.unit }}"
+    state: link
+    owner: "{{ bluetooth_audio_user }}"
+    group: "{{ bluetooth_audio_user }}"
+  loop:
+    - unit: pipewire.socket
+      target: sockets.target.wants
+    - unit: pipewire-pulse.socket
+      target: sockets.target.wants
+    - unit: wireplumber.service
+      target: default.target.wants

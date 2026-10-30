@@ -1,0 +1,12 @@
+[Unit]
+Description=Bluetooth Audio Receiver Startup
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bluetooth-audio-start.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

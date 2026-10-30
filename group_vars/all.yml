@@ -1,0 +1,20 @@
+---
+bluetooth_audio_user: "{{ ansible_user }}"
+bluetooth_audio_user_home: "/home/{{ bluetooth_audio_user }}"
+bluetooth_audio_alias: "Pi Audio"
+bluetooth_audio_start_delay_seconds: 3
+bluetooth_audio_analog_output: true
+
+# The reference Pi uses dtparam=krnbt=off. Keep this optional for other setups.
+bluetooth_audio_manage_krnbt: true
+bluetooth_audio_krnbt_off: true
+
+# WirePlumber 0.4 codec preferences from the working setup. Actual negotiation
+# depends on the phone and the codec implementations available on the Pi.
+bluetooth_audio_codecs:
+  - sbc
+  - sbc_xq
+  - aptx
+  - aptx_hd
+  - ldac
+bluetooth_audio_enable_sbc_xq: true

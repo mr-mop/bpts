@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+sleep {{ bluetooth_audio_start_delay_seconds }}
+
+bluetoothctl power on
+bluetoothctl discoverable on
+bluetoothctl pairable on
+bluetoothctl system-alias {{ bluetooth_audio_alias | quote }}

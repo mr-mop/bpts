@@ -1,0 +1,2 @@
+[bluetooth_receivers]
+receiver ansible_host=192.0.2.10 ansible_user=YOUR_SSH_USER ansible_become=true

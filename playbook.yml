@@ -1,0 +1,7 @@
+---
+- name: Configure Raspberry Pi Bluetooth audio receivers
+  hosts: bluetooth_receivers
+  become: true
+  gather_facts: true
+  roles:
+    - pi_bluetooth_audio_receiver
